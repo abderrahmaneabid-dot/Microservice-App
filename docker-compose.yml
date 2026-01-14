@@ -1,0 +1,84 @@
+services:
+  ms-discovery:
+    build: ./ms-dicovery
+    container_name: ms-discovery
+    ports:
+      - "8761:8761"
+    expose:
+      - "8761"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8761/actuator/health" ]
+      interval: 10s
+  ms-config:
+    build: ./ms-config
+    container_name: ms-config
+    ports:
+      - "9999:9999"
+    expose:
+      - "9999"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9999/actuator/health" ]
+      interval: 10s
+    environment:
+      - EUREKA_SERVER_URL=http://ms-discovery:8761/eureka/
+    depends_on:
+      ms-discovery:
+        condition: service_healthy
+  ms-client:
+    build: ./ms-client
+    container_name: ms-client
+    ports:
+      - "8087:8087"
+    expose:
+      - "8087"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+    environment:
+      - EUREKA_SERVER_URL=http://ms-discovery:8761/eureka/
+      - CONFIG_SERVER_URL=http://ms-config:9999/
+    depends_on:
+      ms-config:
+        condition: service_healthy
+  ms-product:
+    build: ./ms-product
+    container_name: ms-product
+    ports:
+      - "8084:8084"
+    expose:
+      - "8084"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+    environment:
+      - EUREKA_SERVER_URL=http://ms-discovery:8761/eureka/
+      - CONFIG_SERVER_URL=http://ms-config:9999/
+    depends_on:
+        ms-client:
+            condition: service_healthy
+  ms-comande:
+    build: ./ms-comande
+    container_name: ms-comande
+    ports:
+      - "8083:8083"
+    expose:
+      - "8083"
+    environment:
+      - EUREKA_SERVER_URL=http://ms-discovery:8761/eureka/
+      - CONFIG_SERVER_URL=http://ms-config:9999/
+    depends_on:
+        ms-client:
+          condition: service_healthy
+        ms-product:
+            condition: service_healthy
+  ms-gateway:
+    build: ./ms-gateway
+    container_name: ms-gateway
+    ports:
+      - "8888:8888"
+    expose:
+      - "8888"
+    environment:
+      - EUREKA_SERVER_URL=http://ms-discovery:8761/eureka/
+      - CONFIG_SERVER_URL=http://ms-config:9999/
+    depends_on:
+        ms-config:
+            condition: service_healthy
